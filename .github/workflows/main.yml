@@ -1,0 +1,20 @@
+name: Build iOS Tweak
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Theos and SDK
+        run: |
+          bash -c "$(curl -fsSL https://githubusercontent.com)"
+          git clone --quiet https://github.com $THEOS/sdks
+      - name: Compile Package
+        run: |
+          export THEOS=/home/runner/theos
+          make package FINALPACKAGE=1
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: StoreSSLFix-Debian
+          path: packages/*.deb
