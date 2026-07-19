@@ -2,38 +2,45 @@ name: Build iOS Tweak
 on: [push]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-13
     steps:
-      - name: Create Project Workspace
+      - name: Create Workspace and Download Toolchains
         run: |
-          mkdir -p project
+          # 1. Create clean home directories manually
+          mkdir -p /Users/runner/theos
           
-          # 1. Create the control file
-          cat << 'EOF' > project/control
-          Package: com.yourname.storesslfix
+          # 2. Download the core frameworks via raw git protocols
+          git clone --recursive "https://github.com" /Users/runner/theos
+          git clone "https://github.com" /Users/runner/theos/sdks
+
+      - name: Generate Source Files Manually
+        run: |
+          # 1. Create the package information control script
+          cat << 'EOF' > control
+          Package: com.tahir.storesslfix
           Name: StoreSSLFix
           Depends: mobilesubstrate
           Version: 1.0
           Architecture: iphoneos-arm
           Description: Custom iOS 12 SSL Connection Patch
-          Maintainer: Your Name
-          Author: Your Name
+          Maintainer: Tahir
+          Author: Tahir
           Section: Tweaks
           EOF
 
-          # 2. Create the Makefile
-          cat << 'EOF' > project/Makefile
+          # 2. Create the system Makefile mapping definitions
+          cat << 'EOF' > Makefile
           ARCHS = arm64
           TARGET = iphone:clang:latest:12.0
-          include $(THEOS)/makefiles/common.mk
+          include /Users/runner/theos/makefiles/common.mk
           TWEAK_NAME = StoreSSLFix
           StoreSSLFix_FILES = Tweak.x
           StoreSSLFix_FRAMEWORKS = Security Foundation
-          include $(THEOS)/makefiles/tweak.mk
+          include /Users/runner/theos/makefiles/tweak.mk
           EOF
 
-          # 3. Create the Tweak source code
-          cat << 'EOF' > project/Tweak.x
+          # 3. Create the Objective-C source hook code
+          cat << 'EOF' > Tweak.x
           #import <Foundation/Foundation.h>
           #import <Security/Security.h>
           %hookf(OSStatus, SecTrustEvaluateWithError, SecTrustRef trust, CFErrorRef *error) {
@@ -44,14 +51,13 @@ jobs:
           }
           EOF
 
-      - name: Compile iOS Debian Package
-        uses: mileskresic/theos-action@v1.0.2
-        with:
-          theos-src: project
-          theos-sdks: 'https://github.com'
+      - name: Execute Native Framework Compilation
+        run: |
+          export THEOS=/Users/runner/theos
+          make package FINALPACKAGE=1
 
-      - name: Upload Finished DEB File
+      - name: Export Completed Installation Package
         uses: actions/upload-artifact@v4
         with:
           name: StoreSSLFix-Debian
-          path: project/packages/*.deb
+          path: packages/*.deb
