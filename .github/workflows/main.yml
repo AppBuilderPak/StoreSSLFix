@@ -3,36 +3,63 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      # Fixes the Node warning and forces compatibility
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
-      - uses: actions/checkout@v4
-
       - name: Install System Dependencies
         run: |
           sudo apt update
-          sudo apt install -y bzip2 ninja-build python3-pyelftools
+          sudo apt install -y bzip2 ninja-build python3-pyelftools git curl perl clang make
 
-      - name: Manual Toolchain Setup
+      - name: Setup Theos Toolchain
         run: |
-          # Create clean directories
+          # Create and clone toolchain inside the safe home directory
           mkdir -p /home/runner/theos
-          
-          # Clone Theos framework manually to avoid installer issues
           git clone --recursive https://github.com /home/runner/theos
-          
-          # Clone the SDKs directly into the correct clean subdirectory
           git clone https://github.com /home/runner/theos/sdks
+
+      - name: Create Project Files Manually
+        run: |
+          # Generate the control file
+          cat << 'EOF' > control
+          Package: com.yourname.storesslfix
+          Name: StoreSSLFix
+          Depends: mobilesubstrate
+          Version: 1.0
+          Architecture: iphoneos-arm
+          Description: Custom iOS 12 SSL Connection Patch
+          Maintainer: Tahir
+          Author: Tahir
+          Section: Tweaks
+          EOF
+
+          # Generate the Makefile configuration
+          cat << 'EOF' > Makefile
+          ARCHS = arm64
+          TARGET = iphone:clang:latest:12.0
+          include $(THEOS)/makefiles/common.mk
+          TWEAK_NAME = StoreSSLFix
+          StoreSSLFix_FILES = Tweak.x
+          StoreSSLFix_FRAMEWORKS = Security Foundation
+          include $(THEOS)/makefiles/tweak.mk
+          EOF
+
+          # Generate the source code patch
+          cat << 'EOF' > Tweak.x
+          #import <Foundation/Foundation.h>
+          #import <Security/Security.h>
+          %hookf(OSStatus, SecTrustEvaluateWithError, SecTrustRef trust, CFErrorRef *error) {
+              return 0; 
+          }
+          %ctor {
+              %init;
+          }
+          EOF
 
       - name: Compile Package
         run: |
           export THEOS=/home/runner/theos
           make package FINALPACKAGE=1
 
-      - name: Upload Artifacts
+      - name: Upload Finished DEB File
         uses: actions/upload-artifact@v4
         with:
           name: StoreSSLFix-Debian
