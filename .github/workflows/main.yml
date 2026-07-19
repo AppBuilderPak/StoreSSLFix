@@ -3,19 +3,35 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    # ADD THESE TWO LINES PRECISELY:
     permissions:
       contents: write
+    env:
+      # Fixes the Node warning and forces compatibility
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       - uses: actions/checkout@v4
-      - name: Install Theos and SDK
+
+      - name: Install System Dependencies
         run: |
-          bash -c "$(curl -fsSL https://githubusercontent.com)"
-          git clone --quiet https://github.com /home/runner/theos/sdks
+          sudo apt update
+          sudo apt install -y bzip2 ninja-build python3-pyelftools
+
+      - name: Manual Toolchain Setup
+        run: |
+          # Create clean directories
+          mkdir -p /home/runner/theos
+          
+          # Clone Theos framework manually to avoid installer issues
+          git clone --recursive https://github.com /home/runner/theos
+          
+          # Clone the SDKs directly into the correct clean subdirectory
+          git clone https://github.com /home/runner/theos/sdks
+
       - name: Compile Package
         run: |
           export THEOS=/home/runner/theos
           make package FINALPACKAGE=1
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
