@@ -11,14 +11,14 @@ jobs:
 
       - name: Setup Theos Toolchain
         run: |
-          # Create and clone toolchain inside the safe home directory
           mkdir -p /home/runner/theos
-          git clone --recursive https://github.com /home/runner/theos
-          git clone https://github.com /home/runner/theos/sdks
+          git clone --recursive "https://github.com" /home/runner/theos
+          
+          mkdir -p /home/runner/theos/sdks
+          git clone "https://github.com" /home/runner/theos/sdks
 
       - name: Create Project Files Manually
         run: |
-          # Generate the control file
           cat << 'EOF' > control
           Package: com.yourname.storesslfix
           Name: StoreSSLFix
@@ -31,18 +31,16 @@ jobs:
           Section: Tweaks
           EOF
 
-          # Generate the Makefile configuration
           cat << 'EOF' > Makefile
           ARCHS = arm64
           TARGET = iphone:clang:latest:12.0
-          include $(THEOS)/makefiles/common.mk
+          include /home/runner/theos/makefiles/common.mk
           TWEAK_NAME = StoreSSLFix
           StoreSSLFix_FILES = Tweak.x
           StoreSSLFix_FRAMEWORKS = Security Foundation
-          include $(THEOS)/makefiles/tweak.mk
+          include /home/runner/theos/makefiles/tweak.mk
           EOF
 
-          # Generate the source code patch
           cat << 'EOF' > Tweak.x
           #import <Foundation/Foundation.h>
           #import <Security/Security.h>
