@@ -4,51 +4,54 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Build Local Compiler Directories
+      - name: Create Project Workspace
         run: |
-          # Create completely independent local folder structures
-          mkdir -p /home/runner/theos/makefiles
-          mkdir -p /home/runner/packages
-
-      - name: Write Local Framework Files Natively
-        run: |
-          # Create the control parameters
-          cat << 'EOF' > control
-          Package: com.tahir.storesslfix
+          mkdir -p project
+          
+          # 1. Create the control file
+          cat << 'EOF' > project/control
+          Package: com.yourname.storesslfix
           Name: StoreSSLFix
           Depends: mobilesubstrate
           Version: 1.0
           Architecture: iphoneos-arm
           Description: Custom iOS 12 SSL Connection Patch
-          Maintainer: Tahir
-          Author: Tahir
+          Maintainer: Your Name
+          Author: Your Name
           Section: Tweaks
           EOF
 
-          # Create the raw source code string
-          cat << 'EOF' > Tweak.x
+          # 2. Create the Makefile
+          cat << 'EOF' > project/Makefile
+          ARCHS = arm64
+          TARGET = iphone:clang:latest:12.0
+          include $(THEOS)/makefiles/common.mk
+          TWEAK_NAME = StoreSSLFix
+          StoreSSLFix_FILES = Tweak.x
+          StoreSSLFix_FRAMEWORKS = Security Foundation
+          include $(THEOS)/makefiles/tweak.mk
+          EOF
+
+          # 3. Create the Tweak source code
+          cat << 'EOF' > project/Tweak.x
           #import <Foundation/Foundation.h>
           #import <Security/Security.h>
-          int SecTrustEvaluateWithError(void *trust, void **error) {
-              return 0; // Force immediate success signature
+          %hookf(OSStatus, SecTrustEvaluateWithError, SecTrustRef trust, CFErrorRef *error) {
+              return 0; 
+          }
+          %ctor {
+              %init;
           }
           EOF
 
-      - name: Run Native Ubuntu Compilation Bridge
-        run: |
-          # Use Ubuntu's native clang engine to compile the binary directly 
-          # without relying on internal Theos engine components
-          gcc -shared -dynamiclib -o /home/runner/packages/StoreSSLFix.dylib Tweak.x -framework Foundation -framework Security -arch arm64 -isysroot / 2>/dev/null || true
-          
-          # Build a raw mock debian packaging template
-          mkdir -p /tmp/deb/DEBIAN
-          cp control /tmp/deb/DEBIAN/
-          
-          # Package the final installation script block
-          echo "Tweak compiled inside native cloud environment." > /home/runner/packages/build.txt
+      - name: Compile iOS Debian Package
+        uses: mileskresic/theos-action@v1.0.2
+        with:
+          theos-src: project
+          theos-sdks: 'https://github.com'
 
-      - name: Upload Completed Package Archive
+      - name: Upload Finished DEB File
         uses: actions/upload-artifact@v4
         with:
           name: StoreSSLFix-Debian
-          path: /home/runner/packages/*
+          path: project/packages/*.deb
