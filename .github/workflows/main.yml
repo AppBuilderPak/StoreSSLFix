@@ -3,18 +3,21 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    # ADD THESE TWO LINES PRECISELY:
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Install Theos and SDK
         run: |
           bash -c "$(curl -fsSL https://githubusercontent.com)"
-          git clone --quiet https://github.com $THEOS/sdks
+          git clone --quiet https://github.com /home/runner/theos/sdks
       - name: Compile Package
         run: |
           export THEOS=/home/runner/theos
           make package FINALPACKAGE=1
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: StoreSSLFix-Debian
           path: packages/*.deb
