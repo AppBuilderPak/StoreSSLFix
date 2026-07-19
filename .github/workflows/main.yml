@@ -4,28 +4,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install System Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y bzip2 ninja-build python3-pyelftools curl perl clang make unzip
-
-      - name: Download Toolchain via ZIP (Bypass Git)
-        run: |
-          mkdir -p /home/runner/theos
-          
-          # Download main Theos framework as a ZIP archive
-          curl -L "https://github.com" -o /tmp/theos.zip
-          unzip -q /tmp/theos.zip -d /tmp
-          mv /tmp/theos-master/* /home/runner/theos/
-
-          # Download the SDKs as a ZIP archive
-          mkdir -p /home/runner/theos/sdks
-          curl -L "https://github.com" -o /tmp/sdks.zip
-          unzip -q /tmp/sdks.zip -d /tmp
-          mv /tmp/sdks-master/* /home/runner/theos/sdks/
-
       - name: Create Project Files Manually
         run: |
+          # Generate the control layout profile
           cat << 'EOF' > control
           Package: com.yourname.storesslfix
           Name: StoreSSLFix
@@ -38,16 +19,18 @@ jobs:
           Section: Tweaks
           EOF
 
+          # Generate the system Makefile instructions
           cat << 'EOF' > Makefile
           ARCHS = arm64
           TARGET = iphone:clang:latest:12.0
-          include /home/runner/theos/makefiles/common.mk
+          include $(THEOS)/makefiles/common.mk
           TWEAK_NAME = StoreSSLFix
           StoreSSLFix_FILES = Tweak.x
           StoreSSLFix_FRAMEWORKS = Security Foundation
-          include /home/runner/theos/makefiles/tweak.mk
+          include $(THEOS)/makefiles/tweak.mk
           EOF
 
+          # Generate the Objective-C source file
           cat << 'EOF' > Tweak.x
           #import <Foundation/Foundation.h>
           #import <Security/Security.h>
@@ -59,13 +42,5 @@ jobs:
           }
           EOF
 
-      - name: Compile Package
-        run: |
-          export THEOS=/home/runner/theos
-          make package FINALPACKAGE=1
-
-      - name: Upload Finished DEB File
-        uses: actions/upload-artifact@v4
-        with:
-          name: StoreSSLFix-Debian
-          path: packages/*.deb
+      - name: Build Tweak using Automated Action
+        uses: theos/theos-action@v1
