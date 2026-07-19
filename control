@@ -1,0 +1,9 @@
+Package: com.tahirfix.storesslfix
+Name: StoreSSLFix
+Depends: mobilesubstrate
+Version: 1.0
+Architecture: iphoneos-arm
+Description: Custom iOS 12 SSL Connection Patch
+Maintainer: Tahir
+Author: Tahir
+Section: Tweaks
