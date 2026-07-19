@@ -2,20 +2,18 @@ name: Build iOS Tweak
 on: [push]
 jobs:
   build:
-    runs-on: macos-13
+    # CHANGED TO MACOS-14 (Apple Silicon) TO UNBLOCK THE QUEUE IMMEDIATELY
+    runs-on: macos-14
     steps:
-      - name: Create Workspace and Download Toolchains
+      - name: Setup Compiler Framework Layouts
         run: |
-          # 1. Create clean home directories manually
           mkdir -p /Users/runner/theos
-          
-          # 2. Download the core frameworks via raw git protocols
           git clone --recursive "https://github.com" /Users/runner/theos
           git clone "https://github.com" /Users/runner/theos/sdks
 
       - name: Generate Source Files Manually
         run: |
-          # 1. Create the package information control script
+          # 1. Create the control information layout
           cat << 'EOF' > control
           Package: com.tahir.storesslfix
           Name: StoreSSLFix
@@ -28,7 +26,7 @@ jobs:
           Section: Tweaks
           EOF
 
-          # 2. Create the system Makefile mapping definitions
+          # 2. Create the Makefile instruction layout
           cat << 'EOF' > Makefile
           ARCHS = arm64
           TARGET = iphone:clang:latest:12.0
@@ -39,7 +37,7 @@ jobs:
           include /Users/runner/theos/makefiles/tweak.mk
           EOF
 
-          # 3. Create the Objective-C source hook code
+          # 3. Create the Objective-C source hook code string
           cat << 'EOF' > Tweak.x
           #import <Foundation/Foundation.h>
           #import <Security/Security.h>
