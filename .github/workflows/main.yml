@@ -7,15 +7,22 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt update
-          sudo apt install -y bzip2 ninja-build python3-pyelftools git curl perl clang make
+          sudo apt install -y bzip2 ninja-build python3-pyelftools curl perl clang make unzip
 
-      - name: Setup Theos Toolchain
+      - name: Download Toolchain via ZIP (Bypass Git)
         run: |
           mkdir -p /home/runner/theos
-          git clone --recursive "https://github.com" /home/runner/theos
           
+          # Download main Theos framework as a ZIP archive
+          curl -L "https://github.com" -o /tmp/theos.zip
+          unzip -q /tmp/theos.zip -d /tmp
+          mv /tmp/theos-master/* /home/runner/theos/
+
+          # Download the SDKs as a ZIP archive
           mkdir -p /home/runner/theos/sdks
-          git clone "https://github.com" /home/runner/theos/sdks
+          curl -L "https://github.com" -o /tmp/sdks.zip
+          unzip -q /tmp/sdks.zip -d /tmp
+          mv /tmp/sdks-master/* /home/runner/theos/sdks/
 
       - name: Create Project Files Manually
         run: |
